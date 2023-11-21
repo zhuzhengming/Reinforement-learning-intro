@@ -10,5 +10,6 @@ Rewards:r(s,a) = -\infin\quad wall \\
 r(s,a) = -\infin \quad catch \\
 r(s,a) = -1 \quad move \\
 r(s,a) = 0 \quad exit \\
-
 $$
+
+code：牛头人在靠墙的时候的move
