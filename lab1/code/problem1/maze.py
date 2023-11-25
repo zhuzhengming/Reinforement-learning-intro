@@ -78,7 +78,31 @@ class Maze:
                             s += 1;
         return states, map
 
-    def __move(self, state, action):
+    def get_m_action(self, state):
+        # get the action of monitaur
+        row = self.states[state][2];
+        col = self.states[state][3];
+
+        m_actions = [];
+
+        Is_edge = (row == 0) or (row == self.maze.shape[0] - 1) or \
+                  (col == 0) or (col == self.maze.shape[1] - 1);
+
+        if not Is_edge:
+            m_actions = list(self.actions.keys())[1:5];
+        else:
+            for actions in list(self.actions.keys())[1:5]:
+                new_row = row + self.actions[actions][0];
+                new_col = col + self.actions[actions][1];
+
+                Is_out = (new_row == -1) or (new_row == self.maze.shape[0]) or \
+                         (new_col == -1) or (new_col == self.maze.shape[1]);
+
+                if not Is_out:
+                    m_actions.append(actions);
+        return m_actions;
+
+    def __move(self, state, action, m_action=None):
         """ Makes a step in the maze, given a current position and an action.
             If the action STAY or an inadmissible action is used, the agent stays in place.
 
@@ -97,38 +121,20 @@ class Maze:
             row = self.states[state][0];
             col = self.states[state][1];
 
+        # m_actions_list = self.get_m_action(state);
+        # m_action = random.choice(m_actions_list);
 
-        seed = random.randint(1,4);
-        seed1 = random.randint(0, 1);
-
-        row_m = self.states[state][2];
-        col_m = self.states[state][3];
-
-
-        left_up = [2, 4];
-        right_up = [1, 4];
-        left_down = [2, 3];
-        right_down = [1, 3];
-
-        if [row_m, col_m] == [0, 0]:
-            row_m = self.states[state][2] + self.actions[left_up[seed1]][0];
-            col_m = self.states[state][3] + self.actions[left_up[seed1]][1];
-        elif [row_m, col_m] == [0, self.maze.shape[1]-1]:
-            row_m = self.states[state][2] + self.actions[right_up[seed1]][0];
-            col_m = self.states[state][3] + self.actions[right_up[seed1]][1];
-        elif [row_m, col_m] == [self.maze.shape[0]-1, 0]:
-            row_m = self.states[state][2] + self.actions[left_down[seed1]][0];
-            col_m = self.states[state][3] + self.actions[left_down[seed1]][1];
-        elif [row_m, col_m] == [self.maze.shape[0]-1, self.maze.shape[1]-1]:
-            row_m = self.states[state][2] + self.actions[right_down[seed1]][0];
-            col_m = self.states[state][3] + self.actions[right_down[seed1]][1];
+        if m_action != None:
+            # monitaur
+            row_m = self.states[state][2] + self.actions[m_action][0];
+            col_m = self.states[state][3] + self.actions[m_action][1];
         else:
-            row_m = self.states[state][2] + self.actions[seed][0];
-            col_m = self.states[state][3] + self.actions[seed][1];
+            m_actions_list = self.get_m_action(state);
+            m_action = random.choice(m_actions_list);
+            row_m = self.states[state][2] + self.actions[m_action][0];
+            col_m = self.states[state][3] + self.actions[m_action][1];
 
         return self.map[(row, col, row_m, col_m)];
-
-
 
     def __transitions(self):
         """ Computes the transition probabilities for every state action pair.
@@ -142,16 +148,12 @@ class Maze:
         # Compute the transition probabilities. Note that the transitions
         # are deterministic.
         for s in range(self.n_states):
-            for a in range(self.n_actions):
-                next_s = self.__move(s, a);
-                row_m, col_m = self.states[s][2], self.states[s][3];
-                if [row_m, col_m] == [0, 0] or \
-                   [row_m, col_m] == [0, self.maze.shape[1]-1] or \
-                   [row_m, col_m] == [self.maze.shape[0]-1, 0] or \
-                   [row_m, col_m] == [self.maze.shape[0]-1, self.maze.shape[1]-1]:
-                    transition_probabilities[next_s, s, a] = 1/2;
-                else:
-                    transition_probabilities[next_s, s, a] = 1/4;
+            m_actions_list = self.get_m_action(s);
+            for m_action in m_actions_list:
+                for a in range(self.n_actions):
+                    next_s = self.__move(s, a, m_action);
+                    N_m_actions = len(m_actions_list);
+                    transition_probabilities[next_s, s, a] = 1/N_m_actions;
         return transition_probabilities;
 
     def __rewards(self, weights=None, random_rewards=None):
@@ -162,17 +164,30 @@ class Maze:
         if weights is None:
             for s in range(self.n_states):
                 for a in range(self.n_actions):
-                    row, col, row_m, col_m = self.states[s];
-                    next_s = self.__move(s,a);
+
+                    next_s = self.__move(s, a);
+
+                    # Whether be caught or not
+                    Is_caught = False;
+                    m_actions_list = self.get_m_action(s);
+                    for m_action in m_actions_list:
+                        next_M_s = self.__move(s, a, m_action);
+                        row, col, row_m, col_m = self.states[next_M_s];
+                        if [row, col] == [row_m, col_m]:
+                            Is_caught = True;
+
                     # Reward for hitting a wall
                     if s == next_s and a != self.STAY:
                         rewards[s,a] = self.IMPOSSIBLE_REWARD;
-                    # be caught
-                    if [row, col] == [row_m, col_m]:
-                        rewards[s,a] = self.CATCH_REWARD;
+
+                    # Be caught
+                    elif Is_caught and self.maze[self.states[next_s][0],self.states[next_s][1]] != 2:
+                        rewards[s,a] = self.CATCH_REWARD/len(m_actions_list);
+
                     # Reward for reaching the exit
                     elif s == next_s and self.maze[self.states[next_s][0],self.states[next_s][1]] == 2:
                         rewards[s,a] = self.GOAL_REWARD;
+
                     # Reward for taking a step to an empty cell that is not the exit
                     else:
                         rewards[s,a] = self.STEP_REWARD;
@@ -246,14 +261,15 @@ class Maze:
 
 
     def show(self):
-        print('The states are :')
-        print(self.states)
-        print('The actions are:')
-        print(self.actions)
-        print('The mapping of the states:')
-        print(self.map)
-        print('The rewards:')
+        # print('The states are :')
+        # print(self.states)
+        # print('The actions are:')
+        # print(self.actions)
+        # print('The mapping of the states:')
+        # print(self.map)
+        # print('The rewards:')
         print(self.rewards)
+        # print(self.transition_probabilities)
 
 def dynamic_programming(env, horizon):
     """ Solves the shortest path problem using dynamic programming
