@@ -36,8 +36,8 @@ class Maze:
     # Reward values
     STEP_REWARD = -1
     GOAL_REWARD = 0
-    IMPOSSIBLE_REWARD = -100
-    CATCH_REWARD = -100
+    IMPOSSIBLE_REWARD = -1000
+    CATCH_REWARD = -1000
 
 
     def __init__(self, maze, weights=None, random_rewards=False):
@@ -83,24 +83,25 @@ class Maze:
         row = self.states[state][2];
         col = self.states[state][3];
 
-        m_actions = [];
+        m_actions_list = [];
+
 
         Is_edge = (row == 0) or (row == self.maze.shape[0] - 1) or \
                   (col == 0) or (col == self.maze.shape[1] - 1);
 
         if not Is_edge:
-            m_actions = list(self.actions.keys())[1:5];
+            m_actions_list = list(self.actions.keys())[1:];
         else:
-            for actions in list(self.actions.keys())[1:5]:
-                new_row = row + self.actions[actions][0];
-                new_col = col + self.actions[actions][1];
+            for action in list(self.actions.keys())[1:]:
+                new_row = row + self.actions[action][0];
+                new_col = col + self.actions[action][1];
 
                 Is_out = (new_row == -1) or (new_row == self.maze.shape[0]) or \
                          (new_col == -1) or (new_col == self.maze.shape[1]);
 
                 if not Is_out:
-                    m_actions.append(actions);
-        return m_actions;
+                    m_actions_list.append(action);
+        return m_actions_list;
 
     def __move(self, state, action, m_action=None):
         """ Makes a step in the maze, given a current position and an action.
@@ -121,16 +122,13 @@ class Maze:
             row = self.states[state][0];
             col = self.states[state][1];
 
-        # m_actions_list = self.get_m_action(state);
-        # m_action = random.choice(m_actions_list);
-
         if m_action != None:
             # monitaur
             row_m = self.states[state][2] + self.actions[m_action][0];
             col_m = self.states[state][3] + self.actions[m_action][1];
         else:
             m_actions_list = self.get_m_action(state);
-            m_action = random.choice(m_actions_list);
+            m_action = np.random.choice(m_actions_list);
             row_m = self.states[state][2] + self.actions[m_action][0];
             col_m = self.states[state][3] + self.actions[m_action][1];
 
@@ -147,9 +145,11 @@ class Maze:
 
         # Compute the transition probabilities. Note that the transitions
         # are deterministic.
+        # fixed state
         for s in range(self.n_states):
             m_actions_list = self.get_m_action(s);
             for m_action in m_actions_list:
+                # for every action
                 for a in range(self.n_actions):
                     next_s = self.__move(s, a, m_action);
                     N_m_actions = len(m_actions_list);
@@ -165,9 +165,11 @@ class Maze:
             for s in range(self.n_states):
                 for a in range(self.n_actions):
 
+                    # real next state, it is stochastic, because the possibility of
+                    # being caught
                     next_s = self.__move(s, a);
 
-                    # Whether be caught or not
+                    # Can be caught or not
                     Is_caught = False;
                     m_actions_list = self.get_m_action(s);
                     for m_action in m_actions_list:
@@ -176,31 +178,35 @@ class Maze:
                         if [row, col] == [row_m, col_m]:
                             Is_caught = True;
 
+                    # get the position of current state and next state
+                    row1, col1, row1_m, col1_m = self.states[s];
+                    row2, col2, row2_m, col2_m = self.states[next_s];
+
                     # Reward for hitting a wall
-                    if s == next_s and a != self.STAY:
+                    if [row1,col1] == [row2,col2] and a != self.STAY:
                         rewards[s,a] = self.IMPOSSIBLE_REWARD;
 
                     # Be caught
-                    elif Is_caught and self.maze[self.states[next_s][0],self.states[next_s][1]] != 2:
+                    elif Is_caught and self.maze[row2,col2] != 2:
                         rewards[s,a] = self.CATCH_REWARD/len(m_actions_list);
 
                     # Reward for reaching the exit
-                    elif s == next_s and self.maze[self.states[next_s][0],self.states[next_s][1]] == 2:
+                    elif [row1,col1] == [row2,col2] and self.maze[row2,col2] == 2:
                         rewards[s,a] = self.GOAL_REWARD;
 
                     # Reward for taking a step to an empty cell that is not the exit
                     else:
                         rewards[s,a] = self.STEP_REWARD;
 
-                    # # If there exists trapped cells with probability 0.5
-                    # if random_rewards and self.maze[self.states[next_s]]<0:
-                    #     row, col, row_m, col_m = self.states[next_s];
-                    #     # With probability 0.5 the reward is
-                    #     r1 = (1 + abs(self.maze[row, col])) * rewards[s,a];
-                    #     # With probability 0.5 the reward is
-                    #     r2 = rewards[s,a];
-                    #     # The average reward
-                    #     rewards[s,a] = 0.5*r1 + 0.5*r2;
+                    # If there exists trapped cells with probability 0.5
+                    if random_rewards and self.maze[self.states[next_s]]<0:
+                        row, col, row_m, col_m = self.states[next_s];
+                        # With probability 0.5 the reward is
+                        r1 = (1 + abs(self.maze[row, col])) * rewards[s,a];
+                        # With probability 0.5 the reward is
+                        r2 = rewards[s,a];
+                        # The average reward
+                        rewards[s,a] = 0.5*r1 + 0.5*r2;
         # If the weights are described by a weight matrix
         else:
             for s in range(self.n_states):
@@ -212,11 +218,19 @@ class Maze:
 
         return rewards;
 
+    def check_legitimacy(self, s):
+        if self.states[s][0:2] != self.states[s][2:4] and self.maze[self.states[s][0], self.states[s][1]] != 1:
+            flag = True;
+        else:
+            flag = False;
+        return flag;
+
     def simulate(self, start, policy, method):
         if method not in methods:
             error = 'ERROR: the argument method must be in {}'.format(methods);
             raise NameError(error);
-
+        legitimaty_flag = True;
+        success_flag = False;
         path = list();
         if method == 'DynProg':
             # Deduce the horizon from the policy shape
@@ -232,11 +246,20 @@ class Maze:
                 # Add the position in the maze corresponding to the next state
                 # to the path
                 path.append(self.states[next_s])
+                flag = self.check_legitimacy(next_s);
+                if(flag == False):
+                    legitimaty_flag = False;
                 # Update time and state for next iteration
                 t +=1;
                 s = next_s;
+            if(legitimaty_flag == True and self.maze[path[horizon-2][0]][path[horizon-2][1]]== 2):
+                success_flag = True;
+            else:
+                success_flag = False;
+            # print(path);
         if method == 'ValIter':
             # Initialize current state, next state and time
+            self.states[self.n_states] = (-1, -1, -1, -1)
             t = 1;
             s = self.map[start];
             # Add the starting position in the maze to the path
@@ -247,7 +270,7 @@ class Maze:
             # to the path
             path.append(self.states[next_s]);
             # Loop while state is not the goal state
-            while s != next_s:
+            while self.states[s][:2] != (6, 5): # exit
                 # Update state
                 s = next_s;
                 # Move to next state given the policy and the current state
@@ -255,10 +278,16 @@ class Maze:
                 # Add the position in the maze corresponding to the next state
                 # to the path
                 path.append(self.states[next_s])
+                flag = self.check_legitimacy(next_s);
+                if(flag == False):
+                    legitimaty_flag = False;
                 # Update time and state for next iteration
                 t +=1;
-        return path
-
+            if(legitimaty_flag == True and self.maze[path[len(path[0])-1][0]][path[len(path[0])-1][1]]== 2):
+                success_flag = True;
+            else:
+                success_flag = False;
+        return path, success_flag
 
     def show(self):
         # print('The states are :')
@@ -282,7 +311,7 @@ def dynamic_programming(env, horizon):
                                     dimension S*T
     """
 
-    # The dynamic prgramming requires the knowledge of :
+    # The dynamic programming requires the knowledge of :
     # - Transition probabilities
     # - Rewards
     # - State space
@@ -329,7 +358,7 @@ def value_iteration(env, gamma, epsilon):
         :return numpy.array policy: Optimal time-varying policy at every state,
                                     dimension S*T
     """
-    # The value itearation algorithm requires the knowledge of :
+    # The value iteration algorithm requires the knowledge of :
     # - Transition probabilities
     # - Rewards
     # - State space
@@ -352,7 +381,7 @@ def value_iteration(env, gamma, epsilon):
     # Initialization of the VI
     for s in range(n_states):
         for a in range(n_actions):
-            Q[s, a] = r[s, a] + gamma*np.dot(p[:,s,a],V);
+            Q[s, a] = r[s, a] + gamma*np.dot(p[:, s, a], V);
     BV = np.max(Q, 1);
 
     # Iterate until convergence
@@ -364,10 +393,10 @@ def value_iteration(env, gamma, epsilon):
         # Compute the new BV
         for s in range(n_states):
             for a in range(n_actions):
-                Q[s, a] = r[s, a] + gamma*np.dot(p[:,s,a],V);
+                Q[s, a] = r[s, a] + gamma*np.dot(p[:, s, a], V);
         BV = np.max(Q, 1);
         # Show error
-        #print(np.linalg.norm(V - BV))
+        print(np.linalg.norm(V - BV))
 
     # Compute policy
     policy = np.argmax(Q,1);
@@ -386,14 +415,14 @@ def draw_maze(maze):
     # Create figure of the size of the maze
     fig = plt.figure(1, figsize=(cols,rows))
 
-    # Remove the axis ticks and add title title
+    # Remove the axis ticks and add title
     ax = plt.gca()
     ax.set_title('The Maze')
     ax.set_xticks([])
     ax.set_yticks([])
 
     # Give a color to each cell
-    rows,cols    = maze.shape
+    rows, cols = maze.shape
     colored_maze = [[col_map[maze[j,i]] for i in range(cols)] for j in range(rows)]
 
     # Create figure of the size of the maze
@@ -422,7 +451,7 @@ def animate_solution(maze, path):
     # Create figure of the size of the maze
     fig = plt.figure(1, figsize=(cols,rows));
 
-    # Remove the axis ticks and add title title
+    # Remove the axis ticks and add title
     ax = plt.gca();
     ax.set_title('Policy simulation');
     ax.set_xticks([]);
@@ -450,15 +479,24 @@ def animate_solution(maze, path):
 
     # Update the color at each frame
     for i in range(len(path)):
-        grid.get_celld()[(path[i])].set_facecolor(LIGHT_ORANGE)
-        grid.get_celld()[(path[i])].get_text().set_text('Player')
+        # initial the name
+        grid.get_celld()[(path[i][:2])].get_text().set_text('Player')
+        grid.get_celld()[(path[i][2:])].get_text().set_text('Monitaur')
         if i > 0:
-            if path[i] == path[i-1]:
-                grid.get_celld()[(path[i])].set_facecolor(LIGHT_GREEN)
-                grid.get_celld()[(path[i])].get_text().set_text('Player is out')
+            if path[i][:2] == path[i-1][:2]:
+                grid.get_celld()[(path[i][:2])].set_facecolor(LIGHT_GREEN)
+                grid.get_celld()[(path[i-1][2:])].set_facecolor(col_map[maze[path[i-1][2:]]])
+                grid.get_celld()[(path[i])[:2]].get_text().set_text('Game over')
+                grid.get_celld()[(path[i - 1][2:])].get_text().set_text('')
             else:
-                grid.get_celld()[(path[i-1])].set_facecolor(col_map[maze[path[i-1]]])
-                grid.get_celld()[(path[i-1])].get_text().set_text('')
+                grid.get_celld()[(path[i-1][2:])].set_facecolor(col_map[maze[path[i-1][2:]]])
+                grid.get_celld()[(path[i-1][:2])].set_facecolor(col_map[maze[path[i-1][:2]]])
+                # clear the text
+                grid.get_celld()[(path[i-1][:2])].get_text().set_text('')
+                grid.get_celld()[(path[i-1][2:])].get_text().set_text('')
+
+        grid.get_celld()[(path[i][:2])].set_facecolor(LIGHT_ORANGE)
+        grid.get_celld()[(path[i][2:])].set_facecolor(LIGHT_PURPLE)
         display.display(fig)
         display.clear_output(wait=True)
         time.sleep(1)
