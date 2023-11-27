@@ -37,11 +37,11 @@ class Maze:
 
     # Reward values
     STEP_REWARD = -1
-    GOAL_REWARD = 1000
-    IMPOSSIBLE_REWARD = -1000
-    CATCH_REWARD = -1000
+    GOAL_REWARD = 0
+    IMPOSSIBLE_REWARD = -100
+    CATCH_REWARD = -100
 
-    def __init__(self, maze, weights=None, random_rewards=False):
+    def __init__(self, maze, Stay=False, weights=None, random_rewards=False):
         """ Constructor of the environment Maze.
         """
         self.maze = maze;
@@ -52,7 +52,7 @@ class Maze:
         self.transition_probabilities = self.__transitions();
         self.rewards = self.__rewards(weights=weights,
                                       random_rewards=random_rewards);
-
+        self.STAY = Stay;
     def __actions(self):
         actions = dict();
         actions[self.STAY] = (0, 0);
@@ -88,19 +88,32 @@ class Maze:
 
         Is_edge = (row == 0) or (row == self.maze.shape[0] - 1) or \
                   (col == 0) or (col == self.maze.shape[1] - 1);
-
         if not Is_edge:
-            m_actions_list = list(self.actions.keys())[1:];
+            if not self.STAY:
+                m_actions_list = list(self.actions.keys())[1:];
+            else:
+                m_actions_list = list(self.actions.keys())[0:];
         else:
-            for action in list(self.actions.keys())[1:]:
-                new_row = row + self.actions[action][0];
-                new_col = col + self.actions[action][1];
+            if not self.STAY:
+                for action in list(self.actions.keys())[1:]:
+                    new_row = row + self.actions[action][0];
+                    new_col = col + self.actions[action][1];
 
-                Is_out = (new_row == -1) or (new_row == self.maze.shape[0]) or \
-                         (new_col == -1) or (new_col == self.maze.shape[1]);
+                    Is_out = (new_row == -1) or (new_row == self.maze.shape[0]) or \
+                             (new_col == -1) or (new_col == self.maze.shape[1]);
 
-                if not Is_out:
-                    m_actions_list.append(action);
+                    if not Is_out:
+                        m_actions_list.append(action);
+            else:
+                for action in list(self.actions.keys())[0:]:
+                    new_row = row + self.actions[action][0];
+                    new_col = col + self.actions[action][1];
+
+                    Is_out = (new_row == -1) or (new_row == self.maze.shape[0]) or \
+                             (new_col == -1) or (new_col == self.maze.shape[1]);
+
+                    if not Is_out:
+                        m_actions_list.append(action);
         return m_actions_list;
 
     def __move(self, state, action, m_action=None, poison_mode=None):
@@ -113,7 +126,7 @@ class Maze:
         if poison_mode is not None:
             seed = np.random.rand();
             if seed < Poison:
-                return self.n_states;  # return the poison state
+                return self.n_states;  # return the poison state, stop moving.
 
         # Compute the future position given current (state, action)
         row = self.states[state][0] + self.actions[action][0];
@@ -204,6 +217,9 @@ class Maze:
                     else:
                         rewards[s, a] = self.STEP_REWARD;
 
+
+#####################################################################################
+
                     # If there exists trapped cells with probability 0.5
                     if random_rewards and self.maze[self.states[next_s]] < 0:
                         row, col, row_m, col_m = self.states[next_s];
@@ -262,17 +278,19 @@ class Maze:
                 # Add the position in the maze corresponding to the next state
                 # to the path
                 path.append(self.states[next_s])
+                # Update time and state for next iteration
                 flag = self.check_legitimacy(next_s);
                 if (flag == False):
                     legitimaty_flag = False;
-                # Update time and state for next iteration
                 t += 1;
                 s = next_s;
-            if (legitimaty_flag == True and self.maze[path[horizon - 2][0]][path[horizon - 2][1]] == 2):
+
+            if (legitimaty_flag == True and self.maze[path[-1][0]][path[-1][1]] == 2):
                 success_flag = True;
             else:
                 success_flag = False;
             # print(path);
+
         if method == 'ValIter':
             # Initialize current state, next state and time
             self.states[self.n_states] = poison_state[0];  # add dead by poison state
@@ -285,6 +303,7 @@ class Maze:
             # Add the position in the maze corresponding to the next state
             # to the path
             path.append(self.states[next_s]);
+
             # Loop while state is not the goal state
             while self.states[s][:2] != (6, 5) and next_s != self.n_states:  # exit or not poison to dead
                 # Update state
@@ -350,9 +369,9 @@ def dynamic_programming(env, horizon):
     V[:, T] = np.max(Q, 1);
     policy[:, T] = np.argmax(Q, 1);
 
-    # The dynamic programming bakwards recursion
+    # The dynamic programming backwards recursion
     for t in range(T - 1, -1, -1):
-        # Update the value function acccording to the bellman equation
+        # Update the value function according to the bellman equation
         for s in range(n_states):
             for a in range(n_actions):
                 # Update of the temporary Q values
@@ -384,17 +403,17 @@ def value_iteration(env, gamma, epsilon, poison_mode=None):
     POISON_REWARD = -1000
 
     if poison_mode != None:
-        states = np.array(list(env.map.keys()) + poison_state);  # add the state "game over by poison"
+        states = np.array(list(env.map.keys()) + poison_state);  # add the state poison
         n_states = states.shape[0];
         n_actions = env.n_actions;
 
         p = np.zeros((n_states, n_states, n_actions));
-        p[:-1, :-1, :] = env.transition_probabilities * (1 - Poison);  # alive
-        p[-1, :, :] = Poison;  # dead
+        p[:-1, :-1, :] = env.transition_probabilities * (1 - Poison);  # alive: p'(s'|s,a) = (1-1/30)*p(s'|s,a)
+        p[-1, :, :] = Poison;  # dead: p'(s'|s,a) = 1/30
 
         r = np.zeros((n_states, n_actions));
-        r[:-1, :] = env.rewards;  # alive
-        r[-1, :] = POISON_REWARD;  # dead
+        r[:-1, :] = env.rewards;  # alive: r'(s,a) = r(s,a)
+        r[-1, :] = POISON_REWARD;  # dead r'(s,a) = POISON_REWARD
 
     else:
         p = env.transition_probabilities;
@@ -513,10 +532,10 @@ def animate_solution(maze, path):
     for i in range(len(path)):
         # if player is dead because of poison
         if path[i] == (-1, -1, -1, -1):
-            grid.get_celld()[(path[i - 1][:2])].get_text().set_text('Player')
             grid.get_celld()[(path[i - 1][:2])].set_facecolor(LIGHT_RED)
             grid.get_celld()[(path[i - 1][2:])].set_facecolor(col_map[maze[path[i - 1][2:]]])
             grid.get_celld()[(path[i - 1][:2])].get_text().set_text('Player is dead')
+            grid.get_celld()[(path[i - 1][2:])].get_text().set_text('Monitaur')
             break
 
         # initial the name
