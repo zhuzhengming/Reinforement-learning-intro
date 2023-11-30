@@ -558,4 +558,4 @@ def animate_solution(maze, path):
         grid.get_celld()[(path[i][2:])].set_facecolor(LIGHT_PURPLE)
         display.display(fig)
         display.clear_output(wait=True)
-        time.sleep(0.1)
+        time.sleep(0.3)
