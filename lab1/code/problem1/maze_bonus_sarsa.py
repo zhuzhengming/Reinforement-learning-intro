@@ -1,3 +1,8 @@
+# Reinforcement learning lab 1
+# group member: 2
+# name: Zhengming Zhu, Xianao Lu
+# ID: 19990130-2035   20021201-3338
+
 import numpy as np
 import matplotlib.pyplot as plt
 import time

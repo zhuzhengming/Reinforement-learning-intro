@@ -80,7 +80,7 @@ for i in EPISODES:
     EPISODES.set_description("Episode {}".format(i))
     # Reset enviroment data
     done = False
-    state = scale_state_varibles(env.reset(), eta, low, high)
+    state = scale_state_varibles(env.reset()[0], eta, low, high)
     total_episode_reward = 0.
 
     qvalues = Qvalues(state, w)
@@ -90,7 +90,7 @@ for i in EPISODES:
         # Get next state and reward.  The done variable
         # will be True if you reached the goal position,
         # False otherwise
-        next_state, reward, done, _ = env.step(action)
+        next_state, reward, done, _, _ = env.step(action)
         next_state = scale_state_varibles(next_state, eta, low, high)
         qvalues_next = Qvalues(next_state, w)
         next_action = np.argmax(qvalues_next)
