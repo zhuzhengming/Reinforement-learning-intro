@@ -39,7 +39,6 @@ MODE = ['Train', 'Gamma_test', 'Episodes_test', 'Memory_size_test'];
 PLOT = True
 SAVE_NET = True
 
-
 # Import and initialize the discrete Lunar Lander Environment
 env = gym.make('LunarLander-v2')
 env.reset()
@@ -62,6 +61,7 @@ capacity = 10000  # capacity of experience buffer
 C = int(capacity / batch_size)  # update target network after C steps
 hidden_dim = 64
 
+
 def Train_mode(gamma, Memory_size, episode_num):
     ########################################################################################
     # TRAIN mode
@@ -72,18 +72,18 @@ def Train_mode(gamma, Memory_size, episode_num):
 
     # create DQN agent, as well as network
     agent = DQNAgent(dim_state, n_actions, batch_size,
-                     discount_factor, lr, hidden_dim)
+                     gamma, lr, hidden_dim)
 
     # init experience replay buffer
-    buffer = ExperienceReplayBuffer(capacity)
+    buffer = ExperienceReplayBuffer(Memory_size)
     # fill with random experiences
     buffer.fill_random_experience()
 
-    ### Training process
+    # Training process
 
     # trange is an alternative to range in python, from the tqdm library
     # It shows a nice progression bar that you can update with useful information
-    EPISODES = trange(N_episodes, desc='Episode: ', leave=True)
+    EPISODES = trange(episode_num, desc='Episode: ', leave=True)
 
     for i in EPISODES:
         # Reset environment data and initialize variables
@@ -162,7 +162,8 @@ def Train_mode(gamma, Memory_size, episode_num):
         ax[0].legend()
         ax[0].grid(alpha=0.3)
 
-        ax[1].plot([i for i in range(1, len(episode_number_of_steps) + 1)], episode_number_of_steps, label='Steps per episode')
+        ax[1].plot([i for i in range(1, len(episode_number_of_steps) + 1)], episode_number_of_steps,
+                   label='Steps per episode')
         ax[1].plot([i for i in range(1, len(episode_number_of_steps) + 1)], running_average(
             episode_number_of_steps, n_ep_running_average), label='Avg. number of steps per episode')
         ax[1].set_xlabel('Episodes')
@@ -172,34 +173,34 @@ def Train_mode(gamma, Memory_size, episode_num):
         ax[1].grid(alpha=0.3)
         plt.show()
 
+
 if __name__ == "__main__":
     # initialize mode
-    mode = 'Gamma_test'
+    mode = 'Train'
 
     if mode not in MODE:
-        error = 'ERROR: the argument method must be in {}'.format(MODE);
-        raise NameError(error);
+        error = 'ERROR: the argument method must be in {}'.format(MODE)
+        raise NameError(error)
 
     if mode == 'Train':
         print('Train mode')
         Train_mode(discount_factor, capacity, N_episodes)
 
-    if mode == 'Gamma_test':
+    elif mode == 'Gamma_test':
         print('Gamma_test mode')
         SAVE_NET = False
         gamma_0 = 0.6
         gamma_1 = 1
         Train_mode(gamma_0, capacity, N_episodes)
 
-    if mode == 'Episodes_test':
+    elif mode == 'Episodes_test':
         print('Episodes_test mode')
+        SAVE_NET = False
         Episodes_0 = 300
-        Episodes_1 = 800
         Train_mode(discount_factor, capacity, Episodes_0)
 
-    if mode == 'Memory_size_test':
+    elif mode == 'Memory_size_test':
         print('Memory_size_test mode')
-        Memory_size_0 = 5000
+        SAVE_NET = False
         Memory_size_1 = 20000
-        Train_mode(discount_factor, capacity, Memory_size_0)
-
+        Train_mode(discount_factor, capacity, Memory_size_1)
