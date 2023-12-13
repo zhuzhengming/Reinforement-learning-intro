@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from tqdm import trange
 from DQN_agent import RandomAgent, DQNAgent
 from model import ExperienceReplayBuffer
+import torch
 
 
 def running_average(x, N):
@@ -35,7 +36,7 @@ def running_average(x, N):
 
 
 # debug
-MODE = ['Train', 'Gamma_test', 'Episodes_test', 'Memory_size_test'];
+MODE = ['Train', 'Gamma_test', 'Episodes_test', 'Memory_size_test', 'Restriction', 'Comparison']
 PLOT = True
 SAVE_NET = True
 
@@ -49,7 +50,7 @@ discount_factor = 0.98  # Value of the discount factor
 n_ep_running_average = 50  # Running average of 50 episodes
 n_actions = env.action_space.n  # Number of available actions
 dim_state = len(env.observation_space.high)  # State dimensionality
-lr = 0.0005  # learning rate
+lr = 0.0008  # learning rate
 
 # Decay ε
 epsilon_min = 0.05
@@ -174,9 +175,137 @@ def Train_mode(gamma, Memory_size, episode_num):
         plt.show()
 
 
+def Comparison(episode_num):
+    # Load model
+    try:
+        model = torch.load('neural-network-1.pth')
+        print('Network model: {}'.format(model))
+    except:
+        print('File neural-network-1.pth not found!')
+        exit(-1)
+
+    DQN_episode_reward_list = []
+    R_episode_reward_list = []
+
+    agentRandom = RandomAgent(n_actions)
+
+    EPISODES = trange(episode_num, desc='Episode: ', leave=True)
+
+    for i in EPISODES:
+        # Reset environment data and initialize variables
+        DQN_done = False
+        DQN_state = env.reset()[0]  # Initialize environment and read initial state s0
+        DQN_total_episode_reward = 0.
+        while not DQN_done:
+            # choose action
+            with torch.no_grad():
+                q_values = model(torch.tensor([DQN_state]))
+            _, DQN_actions = torch.max(q_values, axis=1)
+            DQN_next_state, DQN_reward, DQN_done, _, _ = env.step(DQN_actions.item())
+
+            # update episode reward
+            DQN_total_episode_reward += DQN_reward
+
+            # update the state
+            DQN_state = DQN_next_state
+
+        # Append episode reward
+        DQN_episode_reward_list.append(DQN_total_episode_reward)
+
+        R_done = False
+        R_state = env.reset()[0]  # Initialize environment and read initial state s0
+        R_total_episode_reward = 0.
+
+        while not R_done:
+            # choose action
+            R_action = agentRandom.forward(R_state)
+            R_next_state, R_reward, R_done, _, _ = env.step(R_action)
+
+            # update episode reward
+            R_total_episode_reward += R_reward
+
+            # update the state
+            R_state = R_next_state
+
+        # Append episode reward
+        R_episode_reward_list.append(R_total_episode_reward)
+
+        env.close()
+
+        EPISODES.set_description(
+            "Episode {}".format(i))
+
+    # Plot Rewards and steps
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
+    ax[0].plot([i for i in range(1, len(DQN_episode_reward_list) + 1)], DQN_episode_reward_list,
+               label='DQN Episode reward')
+    ax[0].set_xlabel('Episodes')
+    ax[0].set_ylabel('Total reward')
+    ax[0].set_title('DQN Total Reward')
+    ax[0].legend()
+    ax[0].grid(alpha=0.3)
+
+    ax[1].plot([i for i in range(1, len(R_episode_reward_list) + 1)], R_episode_reward_list,
+               label='Random Episode reward')
+    ax[1].set_xlabel('Episodes')
+    ax[1].set_ylabel('Total reward')
+    ax[1].set_title('Random Total Reward')
+    ax[1].legend()
+    ax[1].grid(alpha=0.3)
+    plt.show()
+
+
+def Restriction_test():
+    # Load model
+    try:
+        model = torch.load('neural-network-1.pth')
+        print('Network model: {}'.format(model))
+    except:
+        print('File neural-network-1.pth not found!')
+        exit(-1)
+
+    y_list = np.linspace(0, 1.5, 20)
+    omega_list = np.linspace(-np.pi, np.pi, 20)
+
+    Y, Omega = np.meshgrid(y_list, omega_list)
+    Max_Q_values = np.zeros(Y.shape)
+    Optimal_action = np.zeros(Y.shape)
+
+    for i in range(len(y_list)):
+        for j in range(len(omega_list)):
+            state = torch.tensor((0, y_list[i], 0, 0, omega_list[j], 0, 0, 0), dtype=torch.float32)
+
+            with torch.no_grad():
+                q_value = model(state)
+                max_q_value = torch.max(q_value).item()
+                optimal_action = torch.argmax(q_value).item()
+
+            # Record
+            Optimal_action[i, j] = optimal_action
+            Max_Q_values[i, j] = max_q_value
+
+    # plot
+    fig1 = plt.figure(figsize=(10, 6))
+    ax = fig1.add_subplot(111, projection='3d')
+    ax.plot_surface(Y, Omega, Max_Q_values, cmap='viridis')
+
+    ax.set_xlabel('Height y')
+    ax.set_ylabel('Angle ω')
+    ax.set_zlabel('Max Q-value')
+    ax.set_title('Max Q-value for Varying Height and Angle')
+
+    plt.figure(figsize=(10, 6))
+    plt.imshow(Optimal_action, extent=[0, 1.5, -np.pi, np.pi], origin='lower', cmap='viridis', aspect='auto')
+    plt.colorbar(label='Optimal Action')
+    plt.xlabel('Height y')
+    plt.ylabel('Angle ω')
+    plt.title('Optimal Action Heatmap for Varying Height and Angle')
+
+    plt.show()
+
 if __name__ == "__main__":
     # initialize mode
-    mode = 'Train'
+    mode = 'Restriction'
 
     if mode not in MODE:
         error = 'ERROR: the argument method must be in {}'.format(MODE)
@@ -204,3 +333,12 @@ if __name__ == "__main__":
         SAVE_NET = False
         Memory_size_1 = 20000
         Train_mode(discount_factor, capacity, Memory_size_1)
+
+    elif mode == 'Restriction':
+        print('Restriction mode')
+        Restriction_test()
+
+    elif mode == 'Comparison':
+        print('Comparison mode')
+        episodes_num = 50
+        Comparison(episodes_num)
