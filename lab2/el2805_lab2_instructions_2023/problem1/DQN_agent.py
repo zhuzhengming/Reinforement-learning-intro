@@ -68,7 +68,7 @@ class DQNAgent:
     def __init__(self,
                  state_size, action_size,
                  batch_size=64, gamma=0.95,
-                 lr=0.001):
+                 lr=0.001, hidden_dim=64):
 
         # initialize parameters
         self.state_size = state_size
@@ -79,9 +79,9 @@ class DQNAgent:
 
         # input: state
         # output: Q value for every action
-        self.main_net = MLP(state_size, action_size)
+        self.main_net = MLP(state_size, hidden_dim, action_size)
         # update target_net for C episodes
-        self.target_net = MLP(state_size, action_size)
+        self.target_net = MLP(state_size, hidden_dim, action_size)
         self.target_net.eval()
 
         # optimizer: only for main_net
@@ -98,8 +98,11 @@ class DQNAgent:
         return action
 
     def epsilon_decay(self, epsilon_min, epsilon_max, k, Z):
+        # way 1
         epsilon_k = max(epsilon_min,
                         epsilon_max - (epsilon_max - epsilon_min)*(k - 1)/(Z - 1))
+        # way 2
+        # epsilon_k = max(epsilon_min, epsilon_max * (epsilon_min/epsilon_max)**((k-1)/(Z-1)))
         return epsilon_k
 
     def train(self, buffer):
@@ -141,21 +144,6 @@ class DQNAgent:
         # start backward pass
         self.optimizer.step()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def save_network(self):
+        torch.save(self.main_net, 'neural-network-1.pth')
+        print("neural network is saved!")

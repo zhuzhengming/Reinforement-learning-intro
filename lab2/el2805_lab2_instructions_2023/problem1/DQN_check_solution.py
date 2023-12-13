@@ -54,9 +54,9 @@ print('Checking solution...')
 EPISODES = trange(N_EPISODES, desc='Episode: ', leave=True)
 for i in EPISODES:
     EPISODES.set_description("Episode {}".format(i))
-    # Reset enviroment data
+    # Reset environment data
     done = False
-    state = env.reset()
+    state = env.reset()[0]
     total_episode_reward = 0.
     while not done:
         # Get next state and reward.  The done variable
@@ -64,7 +64,7 @@ for i in EPISODES:
         # False otherwise
         q_values = model(torch.tensor([state]))
         _, action = torch.max(q_values, axis=1)
-        next_state, reward, done, _ = env.step(action.item())
+        next_state, reward, done, _, _ = env.step(action.item())
 
         # Update episode reward
         total_episode_reward += reward

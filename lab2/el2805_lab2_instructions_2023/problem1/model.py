@@ -1,3 +1,5 @@
+# Experience replay buffer and MLP network class
+
 from collections import namedtuple, deque
 import random
 import torch
@@ -49,9 +51,8 @@ class ExperienceReplayBuffer(object):
 # hidden layers: 2 layer
 # neurons for every layer: 64
 class MLP(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
-        hidden_dim = 64
 
         # layer 1
         self.layer1 = nn.Linear(input_dim, hidden_dim)

@@ -28,43 +28,48 @@ def running_average(x, N):
     '''
     if len(x) >= N:
         y = np.copy(x)
-        y[N-1:] = np.convolve(x, np.ones((N, )) / N, mode='valid')
+        y[N - 1:] = np.convolve(x, np.ones((N,)) / N, mode='valid')
     else:
         y = np.zeros_like(x)
     return y
+
+
+# debug
+PLOT = True
+SAVE_NET = True
 
 # Import and initialize the discrete Lunar Lander Environment
 env = gym.make('LunarLander-v2')
 env.reset()
 
 # Parameters
-N_episodes = 400                             # Number of episodes
-discount_factor = 0.95                       # Value of the discount factor
-n_ep_running_average = 50                    # Running average of 50 episodes
-n_actions = env.action_space.n               # Number of available actions
+N_episodes = 600  # Number of episodes
+discount_factor = 0.98  # Value of the discount factor
+n_ep_running_average = 50  # Running average of 50 episodes
+n_actions = env.action_space.n  # Number of available actions
 dim_state = len(env.observation_space.high)  # State dimensionality
-lr = 0.0005                                  # learning rate
+lr = 0.0005  # learning rate
 
 # Decay ε
 epsilon_min = 0.05
 epsilon_max = 0.99
 Z = 0.92 * N_episodes
 
-batch_size = 64                              # batch size for experience sampling
-capacity = 10000                             # capacity of experience buffer
-C = int(capacity / batch_size)               # update target network after C steps
-
+batch_size = 64  # batch size for experience sampling
+capacity = 10000  # capacity of experience buffer
+C = int(capacity / batch_size)  # update target network after C steps
+hidden_dim = 64
 
 ########################################################################################
-#TRAIN mode
+# TRAIN mode
 # We will use these variables to compute the average episodic reward and
 # the average number of steps per episode
-episode_reward_list = []       # this list contains the total reward per episode
-episode_number_of_steps = []   # this list contains the number of steps per episode
+episode_reward_list = []  # this list contains the total reward per episode
+episode_number_of_steps = []  # this list contains the number of steps per episode
 
 # create DQN agent, as well as network
 agent = DQNAgent(dim_state, n_actions, batch_size,
-                 discount_factor, lr)
+                 discount_factor, lr, hidden_dim)
 
 # init experience replay buffer
 buffer = ExperienceReplayBuffer(capacity)
@@ -80,7 +85,7 @@ EPISODES = trange(N_episodes, desc='Episode: ', leave=True)
 for i in EPISODES:
     # Reset environment data and initialize variables
     done = False
-    state = env.reset()[0] # Initialize environment and read initial state s0
+    state = env.reset()[0]  # Initialize environment and read initial state s0
     total_episode_reward = 0.
     t = 0  # t ← 0
     step_num = 1
@@ -128,35 +133,38 @@ for i in EPISODES:
     env.close()
     average_episode_reward = running_average(episode_reward_list, n_ep_running_average)[-1]
     average_episode_step = running_average(episode_number_of_steps, n_ep_running_average)[-1]
-    if average_episode_reward > 50:
+    if average_episode_reward > n_ep_running_average:
         break
     # Updates the tqdm update bar with fresh information
     # (episode number, total reward of the last episode, total number of Steps
     # of the last episode, average reward, average number of steps)
     EPISODES.set_description(
         "Episode {} - Reward/Steps: {:.1f}/{} - Avg. Reward/Steps: {:.1f}/{}".format(
-        i, total_episode_reward, t,
-        average_episode_reward,
-        average_episode_step))
+            i, total_episode_reward, t,
+            average_episode_reward,
+            average_episode_step))
 
+if SAVE_NET:
+    agent.save_network()
 
-# Plot Rewards and steps
-fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
-ax[0].plot([i for i in range(1, N_episodes+1)], episode_reward_list, label='Episode reward')
-ax[0].plot([i for i in range(1, N_episodes+1)], running_average(
-    episode_reward_list, n_ep_running_average), label='Avg. episode reward')
-ax[0].set_xlabel('Episodes')
-ax[0].set_ylabel('Total reward')
-ax[0].set_title('Total Reward vs Episodes')
-ax[0].legend()
-ax[0].grid(alpha=0.3)
+if PLOT:
+    # Plot Rewards and steps
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
+    ax[0].plot([i for i in range(1, len(episode_reward_list) + 1)], episode_reward_list, label='Episode reward')
+    ax[0].plot([i for i in range(1, len(episode_reward_list) + 1)], running_average(
+        episode_reward_list, n_ep_running_average), label='Avg. episode reward')
+    ax[0].set_xlabel('Episodes')
+    ax[0].set_ylabel('Total reward')
+    ax[0].set_title('Total Reward vs Episodes')
+    ax[0].legend()
+    ax[0].grid(alpha=0.3)
 
-ax[1].plot([i for i in range(1, N_episodes+1)], episode_number_of_steps, label='Steps per episode')
-ax[1].plot([i for i in range(1, N_episodes+1)], running_average(
-    episode_number_of_steps, n_ep_running_average), label='Avg. number of steps per episode')
-ax[1].set_xlabel('Episodes')
-ax[1].set_ylabel('Total number of steps')
-ax[1].set_title('Total number of steps vs Episodes')
-ax[1].legend()
-ax[1].grid(alpha=0.3)
-plt.show()
+    ax[1].plot([i for i in range(1, len(episode_number_of_steps) + 1)], episode_number_of_steps, label='Steps per episode')
+    ax[1].plot([i for i in range(1, len(episode_number_of_steps) + 1)], running_average(
+        episode_number_of_steps, n_ep_running_average), label='Avg. number of steps per episode')
+    ax[1].set_xlabel('Episodes')
+    ax[1].set_ylabel('Total number of steps')
+    ax[1].set_title('Total number of steps vs Episodes')
+    ax[1].legend()
+    ax[1].grid(alpha=0.3)
+    plt.show()
