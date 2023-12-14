@@ -5,9 +5,7 @@
   求解：Dynamic programming，Value iteration，Policy iteration
 
 - [x] Q-learning：关键更新公式如下，可以是off-policy也可以是on-policy
-  $$
-  Q_{new}(s,a) = Q(s,a)+\alpha[r + \gamma \max_{a'}Q(s',a')-Q(s,a)]
-  $$
+  $Q_{new}(s,a) = Q(s,a)+\alpha[r + \gamma \max_{a'}Q(s',a')-Q(s,a)]$
 
 - [x] Sarsa:关键更新公式如下，on-policy:
   $$
