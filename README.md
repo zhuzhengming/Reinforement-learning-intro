@@ -31,7 +31,6 @@
   $$J(\theta) = E_{s\to \rho_{\theta}}[r(s,\pi_{\theta}(s))]$$
   $$where \quad \pi_{\theta}(s) \text{ is trajectory under policy and state } \pi_{\theta}(s)$$
   $$\rho_\theta \text{ is discounted stationary distribution from the policy}$$
-  $$\nabla_\theta J(\theta) = E_{s_t \to \rho_\theta}[\nabla_aQ(s,a)|_{a=\pi_\theta(s_t),s=s_t}\nabla_\theta \pi_\theta(s)|_{s=s_t}]$$
   $$where \quad \text{Q is evaluated by critic network}$$
   $$\theta = \theta + \alpha \nabla_\theta J(\theta)$$
   
