@@ -35,8 +35,8 @@
   $$where \quad \text{Q is evaluated by critic network} $$
   $$\theta = \theta + \alpha \nabla_\theta J(\theta)$$
   Noise model for exploration:
-  $$a_t = \pi_\theta(s_t) + n_t \\
-  \text{Ornstein-Uhlenbeck process }n_t = \mu n_{t-1} + \omega_{t-1}$$
+  $$a_t = \pi_\theta(s_t) + n_t $$
+  $$\text{Ornstein-Uhlenbeck process }n_t = \mu n_{t-1} + \omega_{t-1}$$
   
 
 - [ ] PPO
