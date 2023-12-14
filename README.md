@@ -25,10 +25,10 @@
 - [ ] DDPG: 基于Critic和Actor框架的算法，适用于连续的动作空间，训练框架基于DQN（target network，经验回放）
 
   Critic：评估当前动作的价值并更新，这部分本质上和DQN网络一致，这里选择的下个状态的Q value是基于actor网络基于下个状态输出的最佳动作，因为Critic网络目的是学习能够准备估计当前策略下的预期回报，从而指导actor进行策略更新。
-  $$Q_{new}(s,a) = Q(s,a) + \alpha [r + \gamma Q'(s',\mu'(s')) - Q(s,a)] \\
-  where \quad \mu'(s')\text{ is the optimal action from actor in the state } s'$$
+  $$Q_{new}(s,a) = Q(s,a) + \alpha [r + \gamma Q'(s',\mu'(s')) - Q(s,a)]$$
+  $$where \quad \mu'(s')\text{ is the optimal action from actor in the state } s'$$
   Actor：针对每个状态给出最佳动作，动作空间是连续的且是deterministic的，目的是最大化当前状态下的Q-value。
-  $$J(\theta) = E_{s\to \rho_{\theta}}[r(s,\pi_{\theta}(s))] \\
+  $$J(\theta) = E_{s\to \rho_{\theta}}[r(s,\pi_{\theta}(s))] $$
   where \quad \pi_{\theta}(s) \text{ is trajectory under policy and state } \pi_{\theta}(s) \\
   \rho_\theta \text{ is discounted stationary distribution from the policy}\\
   \nabla_\theta J(\theta) = E_{s_t \to \rho_\theta}[\nabla_aQ(s,a)|_{a=\pi_\theta(s_t),s=s_t}\nabla_\theta \pi_\theta(s)|_{s=s_t}]\\
