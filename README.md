@@ -30,10 +30,10 @@
   Actor：针对每个状态给出最佳动作，动作空间是连续的且是deterministic的，目的是最大化当前状态下的Q-value。
   $$J(\theta) = E_{s\to \rho_{\theta}}[r(s,\pi_{\theta}(s))] $$
   $$where \quad \pi_{\theta}(s) \text{ is trajectory under policy and state } \pi_{\theta}(s)$$
-  $$\rho_\theta \text{ is discounted stationary distribution from the policy}$$
-  $$\nabla_\theta J(\theta) = E_{s_t \to \rho_\theta}[\nabla_aQ(s,a)|_{a=\pi_\theta(s_t),s=s_t}\nabla_\theta \pi_\theta(s)|_{s=s_t}]$$
-  $$where \quad \text{Q is evaluated by critic network} $$
-  $$\theta = \theta + \alpha \nabla_\theta J(\theta)$$
+  $$ \rho_\theta \text{ is discounted stationary distribution from the policy}$$
+  $$ \nabla_\theta J(\theta) = E_{s_t \to \rho_\theta}[\nabla_aQ(s,a)|_{a=\pi_\theta(s_t),s=s_t}\nabla_\theta \pi_\theta(s)|_{s=s_t}]$$
+  $$ where \quad \text{Q is evaluated by critic network} $$
+  $$ \theta = \theta + \alpha \nabla_\theta J(\theta)$$
   Noise model for exploration:
   $$a_t = \pi_\theta(s_t) + n_t $$
   $$\text{Ornstein-Uhlenbeck process }n_t = \mu n_{t-1} + \omega_{t-1}$$
