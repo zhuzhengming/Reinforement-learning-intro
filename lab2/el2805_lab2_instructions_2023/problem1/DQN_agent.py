@@ -99,10 +99,10 @@ class DQNAgent:
 
     def epsilon_decay(self, epsilon_min, epsilon_max, k, Z):
         # way 1
-        epsilon_k = max(epsilon_min,
-                        epsilon_max - (epsilon_max - epsilon_min)*(k - 1)/(Z - 1))
+        # epsilon_k = max(epsilon_min,
+        #                 epsilon_max - (epsilon_max - epsilon_min)*(k - 1)/(Z - 1))
         # way 2
-        # epsilon_k = max(epsilon_min, epsilon_max * (epsilon_min/epsilon_max)**((k-1)/(Z-1)))
+        epsilon_k = max(epsilon_min, epsilon_max * (epsilon_min/epsilon_max)**((k-1)/(Z-1)))
         return epsilon_k
 
     def train(self, buffer):
@@ -123,7 +123,7 @@ class DQNAgent:
         # calculate current Q value
         # size: 1*batch_size
         # because the output of network is all action value.
-        Q_current = self.main_net(states).gather(1, torch.tensor(actions,dtype=torch.int64)
+        Q_current = self.main_net(states).gather(1, torch.tensor(actions, dtype=torch.int64)
                                                  .unsqueeze(1)).squeeze(1)
 
         # calculate max target Q value

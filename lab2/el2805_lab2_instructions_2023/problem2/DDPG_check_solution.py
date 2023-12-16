@@ -33,7 +33,7 @@ def running_average(x, N):
 
 # Load model
 try:
-    model = torch.load('neural-network-2-actor.pth')
+    model = torch.load('neural-network-2-actor.pth', map_location=torch.device('cpu'))
     print('Network model: {}'.format(model))
 except:
     print('File neural-network-2-actor.pth not found!')
@@ -55,16 +55,16 @@ print('Checking solution...')
 EPISODES = trange(N_EPISODES, desc='Episode: ', leave=True)
 for i in EPISODES:
     EPISODES.set_description("Episode {}".format(i))
-    # Reset enviroment data
+    # Reset environment data
     done = False
-    state = env.reset()
+    state = env.reset()[0]
     total_episode_reward = 0.
     while not done:
         # Get next state and reward.  The done variable
         # will be True if you reached the goal position,
         # False otherwise
         action = model(torch.tensor([state]))[0]
-        next_state, reward, done, _ = env.step(action.detach().numpy())
+        next_state, reward, done, _, _ = env.step(action.detach().numpy())
 
         # Update episode reward
         total_episode_reward += reward

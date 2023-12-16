@@ -64,7 +64,8 @@ for i in EPISODES:
         # False otherwise
         q_values = model(torch.tensor([state]))
         _, action = torch.max(q_values, axis=1)
-        next_state, reward, done, _, _ = env.step(action.item())
+        next_state, reward, terminated, truncated, _ = env.step(action.item())
+        done = terminated or truncated
 
         # Update episode reward
         total_episode_reward += reward
