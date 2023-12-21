@@ -312,7 +312,7 @@ def Comparison(episode_num):
 
 if __name__ == "__main__":
     # initialize mode
-    mode = 'Comparison'
+    mode = 'Train'
 
     if mode not in MODE:
         error = 'ERROR: the argument method must be in {}'.format(MODE)

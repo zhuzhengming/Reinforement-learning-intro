@@ -57,17 +57,20 @@ for i in EPISODES:
     EPISODES.set_description("Episode {}".format(i))
     # Reset enviroment data
     done = False
-    state = env.reset()
+    state = env.reset()[0]
     total_episode_reward = 0.
     while not done:
         # Get next state and reward.  The done variable
         # will be True if you reached the goal position,
         # False otherwise
-        mu, var = model(torch.tensor([state]))
+        mu, var = model(torch.tensor([state], device='cuda'))
+        mu = mu.cpu()
         mu = mu.detach().numpy()
+        var = var.cpu()
         std = torch.sqrt(var).detach().numpy()
         actions = np.clip(np.random.normal(mu, std), -1, 1).flatten()
-        next_state, reward, done, _ = env.step(actions)
+        next_state, reward, done, truncated, _ = env.step(actions)
+        done = done or truncated
 
         # Update episode reward
         total_episode_reward += reward

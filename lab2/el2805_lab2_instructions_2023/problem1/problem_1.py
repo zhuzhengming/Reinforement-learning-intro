@@ -46,12 +46,12 @@ env = gym.make('LunarLander-v2')
 env.reset()
 
 # Default Parameters
-N_episodes = 400  # Number of episodes
+N_episodes = 750  # Number of episodes
 discount_factor = 0.98  # Value of the discount factor
 n_ep_running_average = 50  # Running average of 50 episodes
 n_actions = env.action_space.n  # Number of available actions
 dim_state = len(env.observation_space.high)  # State dimensionality
-lr = 0.0005  # learning rate
+lr = 5e-4  # learning rate
 
 # Decay ε
 epsilon_min = 0.05
@@ -61,7 +61,7 @@ Z = 0.92 * N_episodes
 batch_size = 64  # batch size for experience sampling
 capacity = 10000  # capacity of experience buffer
 C = int(capacity / batch_size)  # update target network after C steps
-hidden_dim = 32
+hidden_dim = 64
 
 
 def Train_mode(gamma, Memory_size, episode_num):
@@ -136,9 +136,9 @@ def Train_mode(gamma, Memory_size, episode_num):
         env.close()
         average_episode_reward = running_average(episode_reward_list, n_ep_running_average)[-1]
         average_episode_step = running_average(episode_number_of_steps, n_ep_running_average)[-1]
-        if STOP:
-            if average_episode_reward > 70:
-                break
+        # if STOP:
+        #     if average_episode_reward > 70:
+        #         break
         # Updates the tqdm update bar with fresh information
         # (episode number, total reward of the last episode, total number of Steps
         # of the last episode, average reward, average number of steps)
@@ -304,7 +304,7 @@ def Restriction_test():
 
 if __name__ == "__main__":
     # initialize mode
-    mode = 'Restriction'
+    mode = 'Comparison'
 
     if mode not in MODE:
         error = 'ERROR: the argument method must be in {}'.format(MODE)
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     elif mode == 'Gamma_test':
         print('Gamma_test mode')
         SAVE_NET = False
-        gamma_0 = 0.8
+        gamma_0 = 0.1
         gamma_1 = 1
         Train_mode(gamma_1, capacity, N_episodes)
 
@@ -325,7 +325,7 @@ if __name__ == "__main__":
         print('Episodes_test mode')
         SAVE_NET = False
         STOP = False
-        Episodes_0 = 600
+        Episodes_0 = 1200
         Train_mode(discount_factor, capacity, Episodes_0)
 
     elif mode == 'Memory_size_test':

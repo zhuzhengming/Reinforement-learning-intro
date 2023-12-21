@@ -63,7 +63,7 @@ for i in EPISODES:
         # Get next state and reward.  The done variable
         # will be True if you reached the goal position,
         # False otherwise
-        action = model(torch.tensor([state]))[0]
+        action = model(torch.tensor([state]))
         next_state, reward, done, _, _ = env.step(action.detach().numpy())
 
         # Update episode reward
