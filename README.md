@@ -22,7 +22,7 @@
   半梯度更新数学表达式：
   $$\theta_{t+1} = \theta_t + \alpha[r+\gamma \max_{a'}Q(s',a';\theta_{copy}) - Q(s,a;\theta)]\nabla_{\theta}Q(s,a;\theta)$$
 
-- [ ] DDPG: 基于Critic和Actor框架的算法，适用于连续的动作空间，训练框架基于DQN（target network，经验回放）
+- [x] DDPG: 基于Critic和Actor框架的算法，适用于连续的动作空间，训练框架基于DQN（target network，经验回放）
 
   Critic：评估当前动作的价值并更新，这部分本质上和DQN网络一致，这里选择的下个状态的Q value是基于actor网络基于下个状态输出的最佳动作，因为Critic网络目的是学习能够准备估计当前策略下的预期回报，从而指导actor进行策略更新。
   $$Q_{new}(s,a) = Q(s,a) + \alpha [r + \gamma Q'(s',\mu'(s')) - Q(s,a)]$$
